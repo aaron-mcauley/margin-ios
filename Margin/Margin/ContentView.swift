@@ -6,18 +6,31 @@
 //
 
 import SwiftUI
+import PencilKit
 
 struct ContentView: View {
+    @State private var canvasView = PKCanvasView()
+    
     var body: some View {
-        VStack {
-            Image(systemName: "globe")
-                .imageScale(.large)
-                .foregroundStyle(.tint)
-                .font(.system(size: 100))
-            Text("Hello, world!")
-                .font(.system(size: 44))
+        ZStack{
+            CanvasView(canvasView: $canvasView)
+                .ignoresSafeArea()
+            
+            VStack {
+                HStack {
+                    Text("Margin")
+                        .font(.headline)
+                        .padding(10)
+                        .background(.ultraThinMaterial)
+                        .clipShape(RoundedRectangle(cornerRadius: 10))
+                    
+                    Spacer()
+                }
+                
+                Spacer()
+            }
+            .padding()
         }
-        .padding()
     }
 }
 
