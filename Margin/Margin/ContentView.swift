@@ -11,6 +11,8 @@ import PencilKit
 struct ContentView: View {
     @State private var canvasView = PKCanvasView()
     @State private var statusText = "Ready"
+    @State private var isSelecting = false
+    @State private var lassoPoints: [CGPoint] = []
     @State private var aiAnswer = ""
     
     var body: some View {
@@ -18,6 +20,31 @@ struct ContentView: View {
             CanvasView(canvasView: $canvasView)
                 .ignoresSafeArea()
             
+            if isSelecting {
+                Path { path in
+                    guard let firstPoint = lassoPoints.first else { return }
+                    
+                    path.move(to: firstPoint)
+                    
+                    for point in lassoPoints.dropFirst() {
+                        path.addLine(to: point)
+                    }
+                }
+                
+                .stroke(Color.blue, lineWidth: 3)
+                .ignoresSafeArea()
+                .gesture (
+                    DragGesture(minimumDistance: 0)
+                        .onChanged { value in
+                            lassoPoints.append(value.location)
+                        }
+                        .onEnded { _ in
+                            statusText = "Lasso Captured"
+                            isSelecting = false
+                            askAi()
+                        }
+                )
+            }
             VStack {
                 HStack {
                     Text("Margin")
@@ -29,9 +56,11 @@ struct ContentView: View {
                     Spacer()
                     
                     Button {
-                        askAi()
+                        isSelecting.toggle()
+                        lassoPoints.removeAll()
+                        statusText = isSelecting ? "Circle a question" : "Ready"
                     } label: {
-                        Text("Ask AI")
+                        Text("AI")
                             .font(.headline)
                             .padding(10)
                             .background(.ultraThinMaterial)
@@ -82,6 +111,29 @@ struct ContentView: View {
                 statusText = "Saved failed"
             }
         }
+    }
+    
+    func finishLasso() {
+        guard !lassoPoints.isEmpty else {
+            statusText = "No selection"
+            return
+        }
+        
+        let minX = lassoPoints.map {$0.x }.min() ?? 0
+        let maxX = lassoPoints.map {$0.x }.min() ?? 0
+        let minY = lassoPoints.map {$0.y }.max() ?? 0
+        let maxY = lassoPoints.map {$0.y }.max() ?? 0
+        
+        let rect = CGRect(
+            x: minX,
+            y: minY,
+            width: maxX - minX,
+            height: maxY - minY
+        )
+        
+        statusText = "Selected: \(Int(rect.width)) x \(Int(rect.height))"
+        
+        askAi()
     }
 }
 
