@@ -15,6 +15,7 @@ struct ContentView: View {
     @State private var lassoPoints: [CGPoint] = []
     @State private var lassoClosed = false
     @State private var aiAnswer = ""
+    @State private var selectionRect: CGRect = .zero
     
     var body: some View {
         ZStack {
@@ -101,23 +102,44 @@ struct ContentView: View {
     }
     
     func askAi() {
-        let image = canvasView.drawing.image(
+        let fullImage = canvasView.drawing.image(
             from: canvasView.bounds,
             scale: UIScreen.main.scale
         )
         
-        if let data = image.pngData() {
+        guard selectionRect.width > 0, selectionRect.height > 0 else {
+            statusText = "No valid selection"
+            return
+        }
+        
+        let scale = UIScreen.main.scale
+        
+        let cropRect = CGRect (
+            x: selectionRect.origin.x * scale,
+            y: selectionRect.origin.y * scale,
+            width: selectionRect.width * scale,
+            height: selectionRect.height * scale
+        )
+        
+        guard let cgImage = fullImage.cgImage?.cropping(to: cropRect) else {
+            statusText = "Crop failed"
+            return
+        }
+        
+        let croppedImage = UIImage(cgImage: cgImage)
+        
+        if let data = croppedImage.pngData() {
             let url = FileManager.default.temporaryDirectory
-                .appendingPathComponent("canvas.png")
+                .appendingPathComponent("selected-region.png")
             
             do {
                 try data.write(to: url)
                 
-                print("Saved image to: ")
+                print("Saved selected region to: ")
                 print(url)
                 
-                statusText = "Image saved"
-                aiAnswer = "Canvas successfully converted to PNG."
+                statusText = "Selected region saved"
+                aiAnswer = "Selected region successfully cropped."
             } catch {
                 print (error)
                 statusText = "Saved failed"
@@ -136,14 +158,14 @@ struct ContentView: View {
         let minY = lassoPoints.map {$0.y }.max() ?? 0
         let maxY = lassoPoints.map {$0.y }.max() ?? 0
         
-        let rect = CGRect(
+        let selectionRect = CGRect(
             x: minX,
             y: minY,
             width: maxX - minX,
             height: maxY - minY
         )
         
-        statusText = "Selected: \(Int(rect.width)) x \(Int(rect.height))"
+        statusText = "Selected: \(Int(selectionRect.width)) x \(Int(selectionRect.height))"
         
         askAi()
     }
