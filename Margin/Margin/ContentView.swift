@@ -13,6 +13,7 @@ struct ContentView: View {
     @State private var statusText = "Ready"
     @State private var isSelecting = false
     @State private var lassoPoints: [CGPoint] = []
+    @State private var lassoClosed = false
     @State private var aiAnswer = ""
     
     var body: some View {
@@ -21,29 +22,34 @@ struct ContentView: View {
                 .ignoresSafeArea()
             
             if isSelecting {
+                Color.clear
+                    .contentShape(Rectangle())
+                    .ignoresSafeArea()
+                    .gesture(
+                        DragGesture(minimumDistance: 0)
+                            .onChanged { value in
+                                lassoPoints.append(value.location)
+                            }
+                            .onEnded { _ in
+                                lassoClosed = true
+                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) {
+                                    isSelecting = false
+                                    finishLasso()
+                                }
+                            }
+                    )
                 Path { path in
                     guard let firstPoint = lassoPoints.first else { return }
-                    
                     path.move(to: firstPoint)
-                    
                     for point in lassoPoints.dropFirst() {
                         path.addLine(to: point)
                     }
+                    if lassoClosed {
+                        path.closeSubpath()
+                    }
                 }
-                
-                .stroke(Color.blue, lineWidth: 3)
+                .stroke(Color.blue, style: StrokeStyle(lineWidth: 3, dash: [8, 5]))
                 .ignoresSafeArea()
-                .gesture (
-                    DragGesture(minimumDistance: 0)
-                        .onChanged { value in
-                            lassoPoints.append(value.location)
-                        }
-                        .onEnded { _ in
-                            statusText = "Lasso Captured"
-                            isSelecting = false
-                            askAi()
-                        }
-                )
             }
             VStack {
                 HStack {
@@ -63,7 +69,13 @@ struct ContentView: View {
                         Text("AI")
                             .font(.headline)
                             .padding(10)
-                            .background(.ultraThinMaterial)
+                            .background {
+                                if isSelecting {
+                                    Color.blue.opacity(0.3)
+                                } else {
+                                    Color.clear.background(.ultraThinMaterial)
+                                }
+                            }
                             .clipShape(RoundedRectangle(cornerRadius: 10))
                     }
                 }

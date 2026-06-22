@@ -12,7 +12,7 @@ struct CanvasView: UIViewRepresentable {
     @Binding var canvasView: PKCanvasView
     
     func makeUIView(context: Context) -> PKCanvasView {
-        canvasView.drawingPolicy = .pencilOnly
+        canvasView.drawingPolicy = .anyInput
         canvasView.backgroundColor = UIColor.systemBackground
         canvasView.isOpaque = false
         
